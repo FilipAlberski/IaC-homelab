@@ -1,0 +1,8 @@
+---
+# Handlers for k3s-master role
+
+- name: Restart k3s
+  systemd:
+    name: k3s
+    state: restarted
+    daemon_reload: yes

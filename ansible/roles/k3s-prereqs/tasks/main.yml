@@ -1,0 +1,56 @@
+---
+# Prerequisites for K3s installation
+
+- name: Disable swap
+  command: swapoff -a
+  when: ansible_swaptotal_mb > 0
+  changed_when: false
+
+- name: Remove swap from fstab
+  lineinfile:
+    path: /etc/fstab
+    regexp: '\sswap\s'
+    state: absent
+
+- name: Load required kernel modules
+  modprobe:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - br_netfilter
+    - overlay
+
+- name: Persist kernel modules
+  copy:
+    content: |
+      br_netfilter
+      overlay
+    dest: /etc/modules-load.d/k3s.conf
+    mode: '0644'
+
+- name: Set sysctl params for Kubernetes
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    sysctl_file: /etc/sysctl.d/99-kubernetes.conf
+    reload: yes
+  loop:
+    - { name: 'net.bridge.bridge-nf-call-iptables', value: '1' }
+    - { name: 'net.bridge.bridge-nf-call-ip6tables', value: '1' }
+    - { name: 'net.ipv4.ip_forward', value: '1' }
+
+- name: Check if SELinux is enabled
+  command: getenforce
+  register: selinux_status
+  when: ansible_os_family == "RedHat"
+  changed_when: false
+  failed_when: false
+
+- name: Set SELinux to permissive (RHEL/Rocky)
+  selinux:
+    policy: targeted
+    state: permissive
+  when:
+    - ansible_os_family == "RedHat"
+    - selinux_status.stdout is defined
+    - selinux_status.stdout != "Disabled"

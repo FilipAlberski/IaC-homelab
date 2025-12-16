@@ -1,0 +1,36 @@
+# Proxmox Configuration
+# Skopiuj do terraform.tfvars i uzupełnij wartości
+# NIE COMMITUJ terraform.tfvars do git!
+
+# Proxmox API - utwórz token w Datacenter -> Permissions -> API Tokens
+proxmox_api_url          = "https://192.168.40.40:8006/api2/json"  # TODO: Zmień na swój IP
+proxmox_api_token_id     = "terraform@pam!terraform"                # TODO: Zmień
+proxmox_api_token_secret = "CHANGE_ME"                              # TODO: Zmień
+proxmox_node             = "pve"                                    # TODO: Zmień na nazwę swojego node'a
+
+# VM Template - musisz wcześniej stworzyć template z cloud-init
+vm_template       = "rocky9-cloud-template"  # TODO: Zmień na nazwę swojego template'a
+vm_storage        = "local-lvm"              # lub twój storage
+vm_network_bridge = "vmbr0"                  # lub twój bridge
+
+# K3s Master
+master_cores     = 2
+master_memory    = 4096  # MB
+master_disk_size = "32G"
+master_ip        = "192.168.40.100"  # TODO: Zmień na wolny IP w twojej sieci
+
+# K3s Workers
+worker_count     = 2
+worker_cores     = 2
+worker_memory    = 4096  # MB
+worker_disk_size = "32G"
+worker_ip_start  = "192.168.40.101"  # TODO: Zmień, workery dostaną .101, .102, etc.
+
+# Network
+network_gateway = "192.168.40.1"   # TODO: Zmień na swój gateway
+network_dns     = "8.8.8.8"        # lub twój DNS
+network_cidr    = 24
+
+# SSH
+ssh_public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC... user@host"  # TODO: Wklej swój klucz SSH
+ssh_user       = "k8s"  # Użytkownik tworzony przez cloud-init

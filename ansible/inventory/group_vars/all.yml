@@ -1,0 +1,21 @@
+---
+# Zmienne dla wszystkich hostów
+
+# Timezone
+timezone: Europe/Warsaw
+
+# Podstawowe pakiety
+base_packages:
+  - vim
+  - htop
+  - curl
+  - wget
+  - git
+  - tmux
+  - net-tools
+  - bash-completion
+  - jq
+
+# K3s
+k3s_version: "v1.29.0+k3s1"  # lub ustaw na "" dla latest
+k3s_install_script_url: "https://get.k3s.io"

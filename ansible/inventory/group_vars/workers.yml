@@ -1,0 +1,4 @@
+---
+# Zmienne dla worker nodes
+
+k3s_role: worker

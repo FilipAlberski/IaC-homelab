@@ -1,0 +1,7 @@
+---
+# Handlers for base role
+
+- name: Restart systemd-resolved
+  systemd:
+    name: systemd-resolved
+    state: restarted

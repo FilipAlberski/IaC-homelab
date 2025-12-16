@@ -1,0 +1,42 @@
+---
+# K3s Worker installation
+
+- name: Get K3s token from master
+  set_fact:
+    k3s_token: "{{ hostvars[groups['masters'][0]]['k3s_token'] }}"
+
+- name: Check if K3s agent is already installed
+  stat:
+    path: /usr/local/bin/k3s
+  register: k3s_binary
+
+- name: Download K3s install script
+  get_url:
+    url: "{{ k3s_install_script_url }}"
+    dest: /tmp/k3s-install.sh
+    mode: '0755'
+  when: not k3s_binary.stat.exists
+
+- name: Install K3s worker
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+    K3S_URL: "https://{{ k3s_master_ip }}:6443"
+    K3S_TOKEN: "{{ k3s_token }}"
+  command: /tmp/k3s-install.sh agent
+  when: not k3s_binary.stat.exists
+  register: k3s_install
+
+- name: Wait for node to be registered
+  delegate_to: "{{ groups['masters'][0] }}"
+  command: kubectl get node {{ inventory_hostname }}
+  register: node_check
+  until: node_check.rc == 0
+  retries: 30
+  delay: 10
+  changed_when: false
+
+- name: Display worker info
+  debug:
+    msg:
+      - "K3s worker {{ inventory_hostname }} joined successfully!"
+      - "Connected to master: {{ k3s_master_ip }}"

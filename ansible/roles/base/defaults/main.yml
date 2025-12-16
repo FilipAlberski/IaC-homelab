@@ -1,0 +1,15 @@
+---
+# Default variables for base role
+
+timezone: Europe/Warsaw
+
+base_packages:
+  - vim
+  - htop
+  - curl
+  - wget
+  - git
+  - tmux
+  - net-tools
+  - bash-completion
+  - jq

@@ -1,0 +1,70 @@
+---
+# K3s Master installation
+
+- name: Check if K3s is already installed
+  stat:
+    path: /usr/local/bin/k3s
+  register: k3s_binary
+
+- name: Download K3s install script
+  get_url:
+    url: "{{ k3s_install_script_url }}"
+    dest: /tmp/k3s-install.sh
+    mode: '0755'
+  when: not k3s_binary.stat.exists
+
+- name: Install K3s master
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+  command: >
+    /tmp/k3s-install.sh server
+    {{ k3s_server_args | join(' ') }}
+  when: not k3s_binary.stat.exists
+  register: k3s_install
+
+- name: Wait for K3s to be ready
+  command: kubectl get nodes
+  register: k3s_ready
+  until: k3s_ready.rc == 0
+  retries: 30
+  delay: 10
+  changed_when: false
+
+- name: Get K3s token
+  slurp:
+    src: /var/lib/rancher/k3s/server/node-token
+  register: k3s_token_raw
+
+- name: Set K3s token fact
+  set_fact:
+    k3s_token: "{{ k3s_token_raw.content | b64decode | trim }}"
+
+- name: Create local kubeconfig directory
+  file:
+    path: "{{ playbook_dir }}/.."
+    state: directory
+  delegate_to: localhost
+  become: no
+  run_once: true
+
+- name: Copy kubeconfig locally
+  fetch:
+    src: /etc/rancher/k3s/k3s.yaml
+    dest: "{{ playbook_dir }}/../kubeconfig"
+    flat: yes
+
+- name: Update kubeconfig with correct IP
+  delegate_to: localhost
+  become: no
+  replace:
+    path: "{{ playbook_dir }}/../kubeconfig"
+    regexp: '127.0.0.1'
+    replace: "{{ k3s_master_ip }}"
+
+- name: Display cluster info
+  debug:
+    msg:
+      - "K3s master installed successfully!"
+      - "Master IP: {{ k3s_master_ip }}"
+      - "Kubeconfig saved to: {{ playbook_dir }}/../kubeconfig"
+      - "Run: export KUBECONFIG=$(pwd)/kubeconfig"
