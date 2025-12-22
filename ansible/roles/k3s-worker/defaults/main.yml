@@ -1,5 +1,0 @@
----
-# Default variables for k3s-worker role
-
-k3s_version: "v1.29.0+k3s1"
-k3s_install_script_url: "https://get.k3s.io"

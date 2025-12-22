@@ -1,8 +1,0 @@
----
-# Handlers for k3s-worker role
-
-- name: Restart k3s-agent
-  systemd:
-    name: k3s-agent
-    state: restarted
-    daemon_reload: yes
