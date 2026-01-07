@@ -1,0 +1,63 @@
+---
+- name: Podstawowy setup wszystkich maszyn
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Update wszystkich paczek (Rocky/RHEL)
+      dnf:
+        name: "*"
+        state: latest
+        update_cache: yes
+      when: ansible_os_family == "RedHat"
+
+    - name: Instalacja podstawowych narzędzi
+      dnf:
+        name:
+          - vim
+          - git
+          - curl
+          - wget
+          - htop
+          - tmux
+          - net-tools
+          - bind-utils
+          - unzip
+          - tar
+          - rsync
+          - tree
+          - ncdu
+        state: present
+      when: ansible_os_family == "RedHat"
+
+    - name: Instalacja narzędzi development (opcjonalne dla lab)
+      dnf:
+        name:
+          - gcc
+          - make
+          - python3-pip
+        state: present
+      when:
+        - ansible_os_family == "RedHat"
+        - "'learning' in group_names"
+
+    - name: Sprawdź czy trzeba reboot (kernel update)
+      stat:
+        path: /var/run/reboot-required
+      register: reboot_required_file
+      ignore_errors: yes
+
+    - name: Info o potrzebie reboot
+      debug:
+        msg: "Reboot może być potrzebny po update kernel"
+      when: reboot_required_file.stat.exists | default(false)
+
+    - name: Ustaw timezone na Europe/Warsaw
+      timezone:
+        name: Europe/Warsaw
+
+    - name: Włącz i uruchom chronyd (NTP)
+      systemd:
+        name: chronyd
+        state: started
+        enabled: yes

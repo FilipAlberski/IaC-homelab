@@ -47,6 +47,10 @@ resource "proxmox_virtual_environment_vm" "docker_01" {
         gateway = "192.168.40.1"
       }
     }
+
+    dns {
+      servers = ["8.8.8.8", "1.1.1.1"]
+    }
   }
 
   tags = ["production", "docker", "container-host"]

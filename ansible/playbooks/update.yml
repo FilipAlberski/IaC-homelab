@@ -1,0 +1,29 @@
+---
+- name: Szybki update systemu
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Update paczek (dnf)
+      dnf:
+        name: "*"
+        state: latest
+        update_cache: yes
+      when: ansible_os_family == "RedHat"
+      register: update_result
+
+    - name: Pokaż co się update'owało
+      debug:
+        var: update_result.results
+      when: update_result.changed
+
+    - name: Sprawdź czy kernel się update'ował
+      shell: needs-restarting -r
+      register: needs_restart
+      failed_when: false
+      changed_when: needs_restart.rc != 0
+
+    - name: Info czy trzeba reboot
+      debug:
+        msg: "System wymaga reboot po update kernel!"
+      when: needs_restart.rc != 0
