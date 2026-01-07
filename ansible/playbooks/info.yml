@@ -1,0 +1,63 @@
+---
+- name: Pokaż info o maszynach
+  hosts: all
+  gather_facts: yes
+
+  tasks:
+    - name: Zbierz info
+      set_fact:
+        machine_info:
+          hostname: "{{ ansible_facts['hostname'] }}"
+          os: "{{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}"
+          kernel: "{{ ansible_facts['kernel'] }}"
+          arch: "{{ ansible_facts['architecture'] }}"
+          cpu_cores: "{{ ansible_facts['processor_vcpus'] }}"
+          cpu_model: "{{ ansible_facts['processor'][2] | default('Unknown') }}"
+          ram_total: "{{ (ansible_facts['memtotal_mb'] / 1024) | round(1) }} GB"
+          ram_free: "{{ (ansible_facts['memfree_mb'] / 1024) | round(1) }} GB"
+          disk_root: "{{ (ansible_facts['mounts'] | selectattr('mount', 'equalto', '/') | map(attribute='size_total') | first / 1024 / 1024 / 1024) | round(1) }} GB"
+          disk_free: "{{ (ansible_facts['mounts'] | selectattr('mount', 'equalto', '/') | map(attribute='size_available') | first / 1024 / 1024 / 1024) | round(1) }} GB"
+          uptime: "{{ (ansible_facts['uptime_seconds'] / 86400) | round(1) }} dni"
+          ip_address: "{{ ansible_facts['default_ipv4']['address'] }}"
+          gateway: "{{ ansible_facts['default_ipv4']['gateway'] }}"
+          dns: "{{ ansible_facts['dns']['nameservers'] | join(', ') }}"
+
+    - name: Wyświetl nagłówek
+      debug:
+        msg: |
+
+          ╔════════════════════════════════════════════════════════════════════╗
+          ║  {{ machine_info.hostname | upper | center(66) }}  ║
+          ╚════════════════════════════════════════════════════════════════════╝
+
+    - name: System
+      debug:
+        msg:
+          - "System:    {{ machine_info.os }}"
+          - "Kernel:    {{ machine_info.kernel }}"
+          - "Arch:      {{ machine_info.arch }}"
+
+    - name: Hardware
+      debug:
+        msg:
+          - "CPU:       {{ machine_info.cpu_cores }} cores - {{ machine_info.cpu_model }}"
+          - "RAM:       {{ machine_info.ram_free }} free / {{ machine_info.ram_total }} total"
+          - "Disk:      {{ machine_info.disk_free }} free / {{ machine_info.disk_root }} total"
+
+    - name: Network
+      debug:
+        msg:
+          - "IP:        {{ machine_info.ip_address }}"
+          - "Gateway:   {{ machine_info.gateway }}"
+          - "DNS:       {{ machine_info.dns }}"
+
+    - name: Status
+      debug:
+        msg:
+          - "Uptime:    {{ machine_info.uptime }}"
+          - "Packages:  {{ ansible_facts['pkg_mgr'] }}"
+          - "SELinux:   {{ ansible_facts['selinux']['status'] | default('disabled') }}"
+
+    - name: Separator
+      debug:
+        msg: "{{ '─' * 72 }}"

@@ -9,7 +9,7 @@
         name: "*"
         state: latest
         update_cache: yes
-      when: ansible_os_family == "RedHat"
+      when: ansible_facts['os_family'] == "RedHat"
 
     - name: Instalacja podstawowych narzędzi
       dnf:
@@ -28,7 +28,7 @@
           - tree
           - ncdu
         state: present
-      when: ansible_os_family == "RedHat"
+      when: ansible_facts['os_family'] == "RedHat"
 
     - name: Instalacja narzędzi development (opcjonalne dla lab)
       dnf:
@@ -38,7 +38,7 @@
           - python3-pip
         state: present
       when:
-        - ansible_os_family == "RedHat"
+        - ansible_facts['os_family'] == "RedHat"
         - "'learning' in group_names"
 
     - name: Sprawdź czy trzeba reboot (kernel update)
