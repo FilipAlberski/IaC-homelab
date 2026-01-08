@@ -1,0 +1,131 @@
+---
+- name: Konfiguracja NFS servera na rocky-lab-02 (do testowania autofs)
+  hosts: rocky-lab-02
+  become: true
+
+  vars:
+    nfs_exports:
+      # Export dla autofs - direct mapping
+      - path: /nfs/shares/public
+        options: "192.168.40.0/24(rw,sync,no_root_squash)"
+        owner: nobody
+        group: nobody
+        mode: "0755"
+
+      # Export dla autofs - indirect mapping
+      - path: /nfs/shares/data
+        options: "192.168.40.0/24(rw,sync,no_root_squash)"
+        owner: nobody
+        group: nobody
+        mode: "0755"
+
+      # Export dla home directories - przydatne do RHCSA
+      - path: /nfs/home
+        options: "192.168.40.0/24(rw,sync,no_root_squash)"
+        owner: nobody
+        group: nobody
+        mode: "0755"
+
+      # Export tylko do odczytu - testowanie różnych opcji
+      - path: /nfs/shares/readonly
+        options: "192.168.40.0/24(ro,sync)"
+        owner: nobody
+        group: nobody
+        mode: "0755"
+
+  tasks:
+    - name: Instalacja NFS server packages
+      dnf:
+        name:
+          - nfs-utils
+          - rpcbind
+        state: present
+
+    - name: Tworzenie katalogów dla NFS exports
+      file:
+        path: "{{ item.path }}"
+        state: directory
+        owner: "{{ item.owner }}"
+        group: "{{ item.group }}"
+        mode: "{{ item.mode }}"
+      loop: "{{ nfs_exports }}"
+
+    - name: Tworzenie przykładowych plików testowych
+      copy:
+        content: |
+          Test file in {{ item.path }}
+          Created: {{ ansible_date_time.iso8601 }}
+          Server: {{ ansible_hostname }}
+        dest: "{{ item.path }}/test-file.txt"
+        owner: "{{ item.owner }}"
+        group: "{{ item.group }}"
+        mode: "0644"
+      loop: "{{ nfs_exports }}"
+
+    - name: Konfiguracja /etc/exports
+      lineinfile:
+        path: /etc/exports
+        line: "{{ item.path }} {{ item.options }}"
+        create: yes
+        mode: "0644"
+      loop: "{{ nfs_exports }}"
+      notify: reload nfs exports
+
+    - name: Konfiguracja firewall dla NFS
+      firewalld:
+        service: "{{ item }}"
+        permanent: yes
+        state: enabled
+        immediate: yes
+      loop:
+        - nfs
+        - rpc-bind
+        - mountd
+      when: ansible_facts['services']['firewalld.service'] is defined
+
+    - name: Uruchomienie i włączenie rpcbind
+      systemd:
+        name: rpcbind
+        state: started
+        enabled: yes
+
+    - name: Uruchomienie i włączenie nfs-server
+      systemd:
+        name: nfs-server
+        state: started
+        enabled: yes
+
+    - name: Weryfikacja exportów NFS
+      command: exportfs -v
+      register: nfs_exports_check
+      changed_when: false
+
+    - name: Wyświetl aktywne exporty
+      debug:
+        msg: "{{ nfs_exports_check.stdout_lines }}"
+
+    - name: Podsumowanie konfiguracji
+      debug:
+        msg:
+          - "=========================================="
+          - "NFS Server skonfigurowany na rocky-lab-02"
+          - "=========================================="
+          - ""
+          - "Dostępne exporty do testowania autofs:"
+          - "  - /nfs/shares/public (rw)"
+          - "  - /nfs/shares/data (rw)"
+          - "  - /nfs/home (rw)"
+          - "  - /nfs/shares/readonly (ro)"
+          - ""
+          - "Adres serwera: 192.168.40.101"
+          - ""
+          - "Przykład montowania ręcznego:"
+          - "  mount -t nfs 192.168.40.101:/nfs/shares/public /mnt"
+          - ""
+          - "Przykład konfiguracji autofs na rocky-lab-01:"
+          - "  Zobacz playbook: autofs-client.yml"
+          - "=========================================="
+
+  handlers:
+    - name: reload nfs exports
+      command: exportfs -ra
