@@ -1,6 +1,6 @@
 ---
-- name: Konfiguracja NFS servera na rocky-lab-02 (do testowania autofs)
-  hosts: rocky-lab-02
+- name: Konfiguracja NFS servera (do testowania autofs)
+  hosts: all
   become: true
 
   vars:
@@ -71,6 +71,13 @@
       loop: "{{ nfs_exports }}"
       notify: reload nfs exports
 
+    - name: Sprawdź czy firewalld jest zainstalowany
+      systemd:
+        name: firewalld
+      register: firewalld_status
+      failed_when: false
+      changed_when: false
+
     - name: Konfiguracja firewall dla NFS
       firewalld:
         service: "{{ item }}"
@@ -81,7 +88,7 @@
         - nfs
         - rpc-bind
         - mountd
-      when: ansible_facts['services']['firewalld.service'] is defined
+      when: firewalld_status.status is defined and firewalld_status.status.LoadState == "loaded"
 
     - name: Uruchomienie i włączenie rpcbind
       systemd:
